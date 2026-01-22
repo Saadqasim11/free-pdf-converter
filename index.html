@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free PDF Converter - Online PDF Tools</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- jsPDF Library for generating real PDF files in browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- 
+    ========================================
+    CSS SECTION (Styling)
+    ========================================
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f0fc;
+            color: #333;
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tool-card {
+            transition: all 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        /* Navbar Link Animation */
+        .nav-link {
+            position: relative;
+            padding-bottom: 2px;
+            cursor: pointer;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: #ef4444; /* Red-500 */
+            transition: width 0.3s ease-in-out;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        /* Active state for nav link (red underline) */
+        .nav-link.active-link::after {
+            width: 100%;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff4a4a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d63031;
+        }
+
+        /* Drag and Drop Zone */
+        .drop-zone {
+            border: 2px dashed #ccc;
+            transition: all 0.3s;
+        }
+        .drop-zone.active {
+            border-color: #ff4a4a;
+            background-color: #fff0f0;
+        }
+
+        .btn-primary {
+            background-color: #ff4a4a;
+            color: white;
+            transition: background 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #d63031;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff4a4a;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- 
+    ========================================
+    HTML SECTION (Structure)
+    ========================================
+    -->
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-3 flex justify-between items-center">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-4 cursor-pointer" onclick="showHome()">
+                <i class="fa-solid fa-file-pdf text-red-500 text-3xl animate-pulse"></i>
+                <span class="text-2xl font-bold text-gray-800 tracking-tight">Free <span class="text-red-500">PDF Converter</span></span>
+            </div>
+            
+            <!-- Desktop Menu -->
+            <div class="hidden md:flex space-x-10 text-gray-600 font-medium">
+                <!-- Added IDs to identify specific links -->
+                <a id="nav-home" onclick="showHome()" class="nav-link text-red-500 active-link transition">Home</a>
+                <a id="nav-pdf" onclick="filterTools('pdf')" class="nav-link hover:text-red-500 transition">PDF Tools</a>
+                <a id="nav-doc" onclick="filterTools('doc')" class="nav-link hover:text-red-500 transition">Doc Tools</a>
+                <a id="nav-url" onclick="showTools('url-shortener')" class="nav-link hover:text-red-500 transition">URL Shortener</a>
+            </div>
+
+            <!-- Mobile Menu Button (Visible on mobile only) -->
+            <div class="flex items-center space-x-3 md:hidden">
+                <button class="text-gray-600 hover:text-red-500 text-xl"><i class="fa-solid fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app-content" class="flex-grow">
+        
+        <!-- HERO SECTION (Home) -->
+        <div id="home-view" class="fade-in">
+            <div class="bg-gray-100 py-16 text-center px-4">
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">Every tool you need to work with PDFs</h1>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">Completely free and easy to use! Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks.</p>
+                
+                <!-- Search Mockup -->
+                <div class="max-w-xl mx-auto relative">
+                    <input type="text" id="tool-search" onkeyup="searchTools()" placeholder="Search for PDF tools..." class="w-full py-3 px-5 pr-12 rounded-full border border-gray-300 focus:outline-none focus:border-red-500 shadow-sm text-lg">
+                    <button class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500">
+                        <i class="fa-solid fa-search text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TOOLS GRID -->
+            <div class="container mx-auto px-4 py-12">
+                <h2 id="grid-title" class="text-2xl font-bold text-gray-800 mb-8 ml-2 border-l-4 border-red-500 pl-3">All Tools</h2>
+                <div id="tools-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    
+                    <!-- ==============================================
+                         PDF TOOLS 
+                         ============================================== -->
+                    
+                    <!-- 1. Merge -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Merge PDF', 'fa-object-group')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-object-group"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Merge PDF</h3>
+                        <p class="text-sm text-gray-500">Combine PDFs in the order you want with the easiest PDF merger available.</p>
+                    </div>
+
+                    <!-- 2. Split -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Split PDF', 'fa-scissors')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-scissors"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Split PDF</h3>
+                        <p class="text-sm text-gray-500">Separate one page or a whole set for easy conversion into independent PDF files.</p>
+                    </div>
+
+                    <!-- 3. Compress -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Compress PDF', 'fa-file-zipper')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-file-zipper"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Compress PDF</h3>
+                        <p class="text-sm text-gray-500">Reduce file size while optimizing for maximal PDF quality.</p>
+                    </div>
+                    
+                    <!-- 4. Extreme Compression -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Extreme Compression', 'fa-weight-hanging')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-weight-hanging"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Extreme Compression</h3>
+                        <p class="text-sm text-gray-500">Maximum reduction in size. Less quality, but smallest file size.</p>
+                    </div>
+
+                    <!-- 5. Edit PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Edit PDF', 'fa-pen-to-square')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-pen-to-square"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Edit PDF</h3>
+                        <p class="text-sm text-gray-500">Add text, images, shapes or freehand annotations to a PDF document.</p>
+                    </div>
+
+                    <!-- 6. Rotate PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Rotate PDF', 'fa-rotate-right')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-rotate-right"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Rotate PDF</h3>
+                        <p class="text-sm text-gray-500">Rotate your PDF pages. You can simply select the angle of rotation.</p>
+                    </div>
+
+                    <!-- 7. Unlock PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Unlock PDF', 'fa-lock-open')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-lock-open"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Unlock PDF</h3>
+                        <p class="text-sm text-gray-500">Remove PDF password security, giving you the freedom to use your PDFs.</p>
+                    </div>
+
+                    <!-- 8. Protect PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Protect PDF', 'fa-lock')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-lock"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Protect PDF</h3>
+                        <p class="text-sm text-gray-500">Protect PDF files with a password. Encrypt PDF documents.</p>
+                    </div>
+
+                    <!-- 9. Organize PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Organize PDF', 'fa-sort')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-sort"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Organize PDF</h3>
+                        <p class="text-sm text-gray-500">Sort pages of your PDF file however you like. Delete PDF pages.</p>
+                    </div>
+
+                    <!-- 10. PDF to JPG -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('PDF to JPG', 'fa-image')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-image"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">PDF to JPG</h3>
+                        <p class="text-sm text-gray-500">Convert each PDF page into a JPG or extract all images contained in a PDF.</p>
+                    </div>
+
+                    <!-- 11. JPG to PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('JPG to PDF', 'fa-images')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-images"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">JPG to PDF</h3>
+                        <p class="text-sm text-gray-500">Convert JPG images to PDF in seconds. Easily adjust orientation and margins.</p>
+                    </div>
+
+                    <!-- 12. Sign PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Sign PDF', 'fa-signature')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-signature"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Sign PDF</h3>
+                        <p class="text-sm text-gray-500">Sign a document and request signatures. Draw your signature or sign via image.</p>
+                    </div>
+
+                    <!-- 13. Watermark PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Watermark PDF', 'fa-copyright')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-copyright"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Watermark</h3>
+                        <p class="text-sm text-gray-500">Stamp an image or text over your PDF in seconds. Choose typography and position.</p>
+                    </div>
+
+                    <!-- 14. Page Numbers -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Page Numbers', 'fa-list-ol')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-list-ol"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Page Numbers</h3>
+                        <p class="text-sm text-gray-500">Add page numbers into PDFs with ease. Select position, dimensions and format.</p>
+                    </div>
+                    
+                    <!-- 15. Repair PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Repair PDF', 'fa-hammer')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-hammer"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Repair PDF</h3>
+                        <p class="text-sm text-gray-500">Recover data from a corrupted or damaged PDF document.</p>
+                    </div>
+
+                    <!-- 16. OCR PDF -->
+                    <div class="tool-card pdf-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('OCR PDF', 'fa-eye')">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fa-solid fa-eye"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">OCR PDF</h3>
+                        <p class="text-sm text-gray-500">Convert scanned PDF to searchable PDF. Make text selectable.</p>
+                    </div>
+
+
+                    <!-- ==============================================
+                         DOC TOOLS 
+                         ============================================== -->
+
+                    <!-- 17. PDF to Word -->
+                    <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('PDF to Word', 'fa-file-word')">
+                        <div class="text-blue-500 text-4xl mb-4"><i class="fa-solid fa-file-word"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">PDF to Word</h3>
+                        <p class="text-sm text-gray-500">Easily convert your PDF files into easy to edit DOC and DOCX documents.</p>
+                    </div>
+
+                     <!-- 18. Word to PDF -->
+                     <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Word to PDF', 'fa-file-pdf')">
+                        <div class="text-blue-500 text-4xl mb-4"><i class="fa-regular fa-file-word"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Word to PDF</h3>
+                        <p class="text-sm text-gray-500">Make DOC and DOCX files easy to read by converting them to PDF.</p>
+                    </div>
+
+                    <!-- 19. PDF to Excel -->
+                    <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('PDF to Excel', 'fa-file-excel')">
+                        <div class="text-green-500 text-4xl mb-4"><i class="fa-solid fa-file-excel"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">PDF to Excel</h3>
+                        <p class="text-sm text-gray-500">Pull data straight from PDFs into Excel spreadsheets in a few seconds.</p>
+                    </div>
+
+                    <!-- 20. Excel to PDF -->
+                    <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Excel to PDF', 'fa-table')">
+                        <div class="text-green-500 text-4xl mb-4"><i class="fa-solid fa-table"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Excel to PDF</h3>
+                        <p class="text-sm text-gray-500">Convert Excel spreadsheets to PDF documents.</p>
+                    </div>
+
+                    <!-- 21. Word to Excel -->
+                    <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('Word to Excel', 'fa-file-csv')">
+                        <div class="text-green-600 text-4xl mb-4"><i class="fa-solid fa-file-csv"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Word to Excel</h3>
+                        <p class="text-sm text-gray-500">Convert Word documents to Excel spreadsheets seamlessly.</p>
+                    </div>
+
+                    <!-- 22. PowerPoint to PDF -->
+                    <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('PowerPoint to PDF', 'fa-file-powerpoint')">
+                        <div class="text-orange-500 text-4xl mb-4"><i class="fa-solid fa-file-powerpoint"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">PowerPoint to PDF</h3>
+                        <p class="text-sm text-gray-500">Make PPT and PPTX slideshows easy to view by converting them to PDF.</p>
+                    </div>
+
+                    <!-- 23. PDF to PowerPoint -->
+                    <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('PDF to PowerPoint', 'fa-file-powerpoint')">
+                        <div class="text-orange-500 text-4xl mb-4"><i class="fa-regular fa-file-powerpoint"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">PDF to PowerPoint</h3>
+                        <p class="text-sm text-gray-500">Turn your PDF documents into editable PowerPoint presentations.</p>
+                    </div>
+
+                    <!-- 24. HTML to PDF -->
+                    <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('HTML to PDF', 'fa-code')">
+                        <div class="text-gray-600 text-4xl mb-4"><i class="fa-solid fa-code"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">HTML to PDF</h3>
+                        <p class="text-sm text-gray-500">Convert webpages to PDF documents with high accuracy.</p>
+                    </div>
+
+                    <!-- 25. EPUB to PDF -->
+                    <div class="tool-card doc-tool bg-white p-6 rounded-xl shadow-sm border border-gray-100 cursor-pointer" onclick="openTool('EPUB to PDF', 'fa-book')">
+                        <div class="text-green-700 text-4xl mb-4"><i class="fa-solid fa-book"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">EPUB to PDF</h3>
+                        <p class="text-sm text-gray-500">Convert EPUB ebooks to PDF documents easily.</p>
+                    </div>
+
+                    <!-- UTILITIES -->
+                     <div class="tool-card bg-white p-6 rounded-xl shadow-sm border border-red-100 cursor-pointer ring-2 ring-red-50" onclick="showTools('url-shortener')">
+                        <div class="text-indigo-600 text-4xl mb-4"><i class="fa-solid fa-link"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">URL Shortener</h3>
+                        <p class="text-sm text-gray-500">Shorten long URLs easily. Powered by TinyURL.</p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURES VIEW (Restored) -->
+        <div id="features-view" class="hidden fade-in">
+             <div class="bg-gray-100 py-16 text-center px-4 mb-10">
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">Why choose Free PDF Converter?</h1>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">We provide the best tools to manage your documents effectively.</p>
+            </div>
+            
+            <div class="container mx-auto px-4 pb-16">
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Feature 1 -->
+                    <div class="p-8 bg-white rounded-xl shadow-md hover:shadow-lg transition text-center border-t-4 border-red-500">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 text-2xl">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-3">100% Secure</h3>
+                        <p class="text-gray-600">All files are processed securely and deleted automatically from our servers after 2 hours.</p>
+                    </div>
+
+                    <!-- Feature 2 -->
+                    <div class="p-8 bg-white rounded-xl shadow-md hover:shadow-lg transition text-center border-t-4 border-red-500">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 text-2xl">
+                             <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-3">Lightning Fast</h3>
+                        <p class="text-gray-600">Our powerful cloud servers process your documents in seconds, not minutes.</p>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="p-8 bg-white rounded-xl shadow-md hover:shadow-lg transition text-center border-t-4 border-red-500">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 text-2xl">
+                             <i class="fa-solid fa-mobile-screen"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-3">Fully Responsive</h3>
+                        <p class="text-gray-600">Works seamlessly on your desktop, tablet, and mobile phone directly from the browser.</p>
+                    </div>
+                </div>
+                
+                <div class="mt-16 text-center">
+                    <button onclick="showHome()" class="btn-primary text-xl font-bold py-4 px-12 rounded-full shadow-lg">Start Converting Now</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GENERIC TOOL INTERFACE -->
+        <div id="tool-view" class="hidden min-h-[80vh] bg-gray-50 flex flex-col items-center justify-center p-4 fade-in">
+            <button onclick="showHome()" class="absolute top-20 left-4 md:left-20 text-gray-500 hover:text-red-500 flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back to Home
+            </button>
+
+            <div class="text-center mb-8">
+                <div id="tool-icon" class="text-6xl text-red-500 mb-4"><i class="fa-solid fa-file"></i></div>
+                <h1 id="tool-title" class="text-4xl font-bold text-gray-800 mb-2">Tool Name</h1>
+                <p class="text-lg text-gray-600">Secure, fast and easy to use.</p>
+            </div>
+
+            <!-- Upload Zone -->
+            <div id="upload-step" class="w-full max-w-2xl bg-white rounded-xl shadow-lg p-10 text-center drop-zone cursor-pointer relative" 
+                 ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                
+                <input type="file" id="fileInput" class="hidden" onchange="handleFileSelect(event)" multiple>
+                
+                <div class="mb-6">
+                    <i class="fa-solid fa-cloud-arrow-up text-6xl text-red-400"></i>
+                </div>
+                <button onclick="document.getElementById('fileInput').click()" class="btn-primary text-xl font-bold py-4 px-10 rounded-lg shadow-md mb-4 inline-block">
+                    Select PDF files
+                </button>
+                <p class="text-gray-500">or drop PDFs here</p>
+                
+                <!-- Removed Google Drive and Dropbox icons as requested -->
+            </div>
+
+            <!-- Processing Step -->
+            <div id="processing-step" class="hidden w-full max-w-2xl bg-white rounded-xl shadow-lg p-10 text-center">
+                <h2 class="text-2xl font-bold mb-6 text-gray-700">Processing Files...</h2>
+                <div class="flex justify-center mb-6">
+                    <div class="loader"></div>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
+                    <div id="progress-bar" class="bg-red-500 h-4 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="progress-text" class="text-gray-500">0% Uploaded</p>
+            </div>
+
+            <!-- Result Step -->
+            <div id="result-step" class="hidden w-full max-w-2xl bg-white rounded-xl shadow-lg p-10 text-center">
+                <div class="text-green-500 text-6xl mb-4"><i class="fa-solid fa-circle-check"></i></div>
+                <h2 class="text-3xl font-bold mb-4 text-gray-800">Task Completed!</h2>
+                <p class="text-gray-600 mb-8">Your documents have been processed successfully.</p>
+                
+                <div class="flex flex-col md:flex-row justify-center gap-4">
+                    <!-- Added onclick to trigger download logic -->
+                    <button onclick="downloadDummyFile()" class="btn-primary text-lg font-bold py-3 px-8 rounded-lg shadow-md flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> Download File
+                    </button>
+                    <button onclick="resetTool()" class="bg-gray-200 text-gray-700 hover:bg-gray-300 text-lg font-bold py-3 px-8 rounded-lg shadow-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- URL SHORTENER TOOL -->
+        <div id="url-shortener-view" class="hidden min-h-[80vh] flex flex-col items-center justify-center p-4 fade-in bg-blue-50">
+             <button onclick="showHome()" class="absolute top-20 left-4 md:left-20 text-gray-500 hover:text-blue-600 flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back to Home
+            </button>
+            
+            <div class="w-full max-w-3xl bg-white p-8 md:p-12 rounded-2xl shadow-xl text-center">
+                <div class="text-blue-600 text-5xl mb-6"><i class="fa-solid fa-link"></i></div>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Paste the URL to be shortened</h1>
+                <p class="text-gray-600 mb-8">Shorten, share and track. Powered by TinyURL.</p>
+                
+                <div class="flex flex-col md:flex-row gap-4 mb-6">
+                    <input type="url" id="long-url-input" placeholder="Enter link here (http://...)" class="flex-grow p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg">
+                    <button onclick="shortenUrl()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg shadow-lg">Shorten URL</button>
+                </div>
+
+                <div id="shortener-result" class="hidden mt-8 p-6 bg-blue-50 rounded-xl border border-blue-100">
+                    <p class="text-gray-500 mb-2 uppercase text-sm font-bold tracking-wider">Your Short Link:</p>
+                    <div class="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
+                        <a href="#" id="short-link-text" class="text-blue-600 font-medium truncate mr-4 hover:underline" target="_blank">...</a>
+                        <!-- ID added to button to select it easily in JS -->
+                        <button id="copy-btn" onclick="copyToClipboard()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition text-sm font-bold w-24">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12 mt-auto">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center md:items-start">
+                
+                <!-- Brand Section -->
+                <div class="text-center md:text-left mb-8 md:mb-0">
+                    <div class="flex items-center justify-center md:justify-start gap-2 mb-4">
+                        <i class="fa-solid fa-file-pdf text-red-500 text-2xl"></i>
+                        <h4 class="text-xl font-bold text-white">Free PDF Converter</h4>
+                    </div>
+                    <p class="text-gray-400 text-sm max-w-xs">
+                        The ultimate free online tool to merge, split, compress, and convert your PDF files.
+                    </p>
+                </div>
+
+                <!-- Functional Menu -->
+                <div class="flex gap-8 text-sm font-medium">
+                    <a href="#" onclick="showHome(); return false;" class="text-gray-300 hover:text-white hover:text-red-400 transition transform hover:scale-105">Home</a>
+                    <a href="#" onclick="showFeatures(); return false;" class="text-gray-300 hover:text-white hover:text-red-400 transition transform hover:scale-105">Features</a>
+                    <a href="#" onclick="filterTools('pdf'); return false;" class="text-gray-300 hover:text-white hover:text-red-400 transition transform hover:scale-105">PDF Tools</a>
+                    <a href="#" onclick="filterTools('doc'); return false;" class="text-gray-300 hover:text-white hover:text-red-400 transition transform hover:scale-105">Doc Tools</a>
+                </div>
+
+            </div>
+
+            <!-- Copyright -->
+            <div class="border-t border-gray-700 pt-8 mt-8 text-center text-gray-500 text-sm">
+                &copy; 2026 Free PDF Converter. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- 
+    ========================================
+    JAVASCRIPT SECTION (Logic)
+    ========================================
+    -->
+    <script>
+        // DOM Elements
+        const homeView = document.getElementById('home-view');
+        const toolView = document.getElementById('tool-view');
+        const urlShortenerView = document.getElementById('url-shortener-view');
+        const featuresView = document.getElementById('features-view');
+        const toolsGrid = document.getElementById('tools-grid');
+        const gridTitle = document.getElementById('grid-title');
+        
+        // Tool specific elements
+        const toolTitle = document.getElementById('tool-title');
+        const toolIcon = document.getElementById('tool-icon');
+        const uploadStep = document.getElementById('upload-step');
+        const processingStep = document.getElementById('processing-step');
+        const resultStep = document.getElementById('result-step');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+
+        // Navigation Functions
+        function hideAllViews() {
+            homeView.classList.add('hidden');
+            toolView.classList.add('hidden');
+            urlShortenerView.classList.add('hidden');
+            featuresView.classList.add('hidden');
+        }
+
+        // Updated function to handle menu highlighting
+        function setActiveNav(activeId) {
+            const navs = ['nav-home', 'nav-pdf', 'nav-doc', 'nav-url'];
+            navs.forEach(id => {
+                const el = document.getElementById(id);
+                if (id === activeId) {
+                    el.classList.add('text-red-500', 'active-link');
+                } else {
+                    el.classList.remove('text-red-500', 'active-link');
+                }
+            });
+        }
+
+        function showHome() {
+            hideAllViews();
+            homeView.classList.remove('hidden');
+            // Show all tools
+            const tools = document.querySelectorAll('.tool-card');
+            tools.forEach(tool => tool.classList.remove('hidden'));
+            gridTitle.innerText = "All Tools";
+            setActiveNav('nav-home');
+            window.scrollTo(0, 0);
+        }
+
+        function showFeatures() {
+            hideAllViews();
+            featuresView.classList.remove('hidden');
+            // Remove active highlighting from top menu to avoid confusion, or highlight 'Home' if preferred
+            // For now, we'll deselect all top menu items
+            const navs = ['nav-home', 'nav-pdf', 'nav-doc', 'nav-url'];
+            navs.forEach(id => document.getElementById(id).classList.remove('text-red-500', 'active-link'));
+            
+            window.scrollTo(0, 0);
+        }
+
+        function filterTools(category) {
+            hideAllViews();
+            homeView.classList.remove('hidden');
+            
+            const tools = document.querySelectorAll('.tool-card');
+            
+            if (category === 'pdf') {
+                gridTitle.innerText = "PDF Tools";
+                setActiveNav('nav-pdf');
+                tools.forEach(tool => {
+                    if (tool.classList.contains('pdf-tool')) {
+                        tool.classList.remove('hidden');
+                    } else {
+                        tool.classList.add('hidden');
+                    }
+                });
+            } else if (category === 'doc') {
+                gridTitle.innerText = "Document Tools";
+                setActiveNav('nav-doc');
+                tools.forEach(tool => {
+                    if (tool.classList.contains('doc-tool')) {
+                        tool.classList.remove('hidden');
+                    } else {
+                        tool.classList.add('hidden');
+                    }
+                });
+            }
+            window.scrollTo(0, 0);
+        }
+
+        function showTools(type) {
+            hideAllViews();
+            if(type === 'url-shortener') {
+                urlShortenerView.classList.remove('hidden');
+                setActiveNav('nav-url');
+            }
+            window.scrollTo(0, 0);
+        }
+
+        function searchTools() {
+            const query = document.getElementById('tool-search').value.toLowerCase();
+            const tools = document.querySelectorAll('.tool-card');
+            
+            tools.forEach(tool => {
+                const title = tool.querySelector('h3').innerText.toLowerCase();
+                const desc = tool.querySelector('p').innerText.toLowerCase();
+                
+                if(title.includes(query) || desc.includes(query)) {
+                    tool.classList.remove('hidden');
+                } else {
+                    tool.classList.add('hidden');
+                }
+            });
+        }
+
+        // Open Generic Tool
+        function openTool(name, iconClass) {
+            hideAllViews();
+            toolView.classList.remove('hidden');
+            
+            // Note: We keep the menu active state based on where the user came from, 
+            // or we could clear it. For now, keeping the last selection feels natural.
+            
+            toolTitle.innerText = name;
+            toolIcon.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+            
+            resetTool();
+            window.scrollTo(0, 0);
+        }
+
+        function resetTool() {
+            uploadStep.classList.remove('hidden');
+            processingStep.classList.add('hidden');
+            resultStep.classList.add('hidden');
+            progressBar.style.width = '0%';
+            progressText.innerText = '0% Uploaded';
+        }
+
+        // Drag and Drop Logic
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('active');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('active');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('active');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                simulateProcessing(files);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                simulateProcessing(files);
+            }
+        }
+
+        // Simulation Logic
+        function simulateProcessing(files) {
+            uploadStep.classList.add('hidden');
+            processingStep.classList.remove('hidden');
+
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        processingStep.classList.add('hidden');
+                        resultStep.classList.remove('hidden');
+                    }, 500);
+                } else {
+                    width += Math.random() * 10; 
+                    if (width > 100) width = 100;
+                    progressBar.style.width = width + '%';
+                    progressText.innerText = Math.floor(width) + '% Processed';
+                }
+            }, 200);
+        }
+        
+        // Download Dummy File Logic (New)
+        async function downloadDummyFile() {
+            const tName = toolTitle.innerText;
+            
+            // Check if jsPDF is loaded
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                alert("PDF Generator not loaded yet. Please wait.");
+                return;
+            }
+
+            const doc = new jsPDF();
+            
+            // Add content to the PDF
+            doc.setFontSize(22);
+            doc.setTextColor(255, 74, 74); // Red color
+            doc.text("Free PDF Converter", 20, 30);
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Tool Used: ${tName}`, 20, 50);
+            doc.text(`Timestamp: ${new Date().toLocaleString()}`, 20, 60);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text("Note: This is a frontend demo file.", 20, 80);
+            doc.text("Actual file processing requires a backend server.", 20, 90);
+            
+            // Save the file as PDF
+            doc.save(`Processed_${tName.replace(/\s+/g, '_')}.pdf`); 
+        }
+
+        // URL Shortener Logic (Reverted to TinyURL with CORS Proxy)
+        async function shortenUrl() {
+            const input = document.getElementById('long-url-input');
+            const resultDiv = document.getElementById('shortener-result');
+            const resultLink = document.getElementById('short-link-text');
+            const shortenBtn = document.querySelector('button[onclick="shortenUrl()"]');
+
+            if (!input.value) {
+                alert("Please enter a URL first!");
+                return;
+            }
+
+            const originalText = shortenBtn.innerText;
+            shortenBtn.innerText = "Shortening...";
+            shortenBtn.disabled = true;
+
+            let urlToShorten = input.value;
+            if (!urlToShorten.startsWith('http://') && !urlToShorten.startsWith('https://')) {
+                urlToShorten = 'https://' + urlToShorten;
+            }
+
+            // Remove any old error messages
+            const existingMsg = document.getElementById('error-msg');
+            if (existingMsg) existingMsg.remove();
+
+            try {
+                // Using CORS proxy + TinyURL API to get a REAL link
+                const proxyUrl = 'https://corsproxy.io/?';
+                const targetUrl = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(urlToShorten)}`;
+                
+                const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
+                
+                if (response.ok) {
+                    const shortUrl = await response.text();
+                    resultLink.innerText = shortUrl;
+                    resultLink.href = shortUrl;
+                    
+                    // Show result div
+                    resultDiv.classList.remove('hidden');
+                } else {
+                    throw new Error("API failed");
+                }
+            } catch (error) {
+                console.error("Shortening failed:", error);
+                
+                // Show a clear error message instead of a fake link
+                alert("Unable to generate a real link due to browser security restrictions on this network. Please try again later or use a backend server.");
+            }
+
+            shortenBtn.innerText = originalText;
+            shortenBtn.disabled = false;
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('short-link-text').innerText;
+            const copyBtn = document.getElementById('copy-btn');
+            
+            // Fallback for environments where Clipboard API is blocked
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                     // Change Button Text Visual Feedback
+                     const originalText = copyBtn.innerText;
+                     copyBtn.innerText = "Copied!";
+                     copyBtn.classList.remove("bg-green-500", "hover:bg-green-600");
+                     copyBtn.classList.add("bg-gray-700", "hover:bg-gray-800");
+
+                     // Revert back after 2 seconds
+                     setTimeout(() => {
+                        copyBtn.innerText = originalText;
+                        copyBtn.classList.add("bg-green-500", "hover:bg-green-600");
+                        copyBtn.classList.remove("bg-gray-700", "hover:bg-gray-800");
+                     }, 2000);
+                     
+                } else {
+                     alert("Unable to copy link.");
+                }
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+    </script>
+</body>
+</html>
